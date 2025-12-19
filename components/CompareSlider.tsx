@@ -25,40 +25,51 @@ export const CompareSlider: React.FC<CompareSliderProps> = ({ original, processe
   };
 
   return (
-    <div className="flex justify-center w-full">
+    <div className="flex justify-center w-full select-none">
       <div 
         ref={containerRef}
-        className="relative inline-block overflow-hidden select-none cursor-ew-resize group rounded-xl shadow-lg border border-slate-200"
+        className="relative inline-block overflow-hidden cursor-ew-resize group rounded-xl shadow-lg border border-slate-200"
         onMouseMove={(e) => e.buttons === 1 && handleMouseMove(e)}
         onTouchMove={handleMouseMove}
         onClick={handleMouseMove}
       >
-        {/* Background (Processed) - Drives dimensions */}
-        {/* Using max-h-[70vh] and w-auto ensures the container shrinks to fit the image, 
-            preventing the 'zoom' effect caused by overflow clipping */}
+        {/* Ghost Image - Drives the container dimensions */}
+        {/* We use the original image as the reference for aspect ratio and size. 
+            It is invisible but takes up space in the DOM. */}
         <img 
-          src={processed} 
-          alt="After" 
-          className="block max-w-full max-h-[70vh] w-auto h-auto object-contain select-none"
-          onDragStart={handleDragStart}
+          src={original} 
+          alt="Ghost" 
+          className="invisible block max-w-full max-h-[70vh] w-auto h-auto pointer-events-none"
         />
 
-        {/* Foreground (Original) - Clipped */}
+        {/* Bottom Layer: Processed Image */}
+        {/* Positioned absolutely to cover the ghost image exactly */}
+        <div className="absolute inset-0 w-full h-full">
+            <img 
+            src={processed} 
+            alt="After" 
+            className="w-full h-full object-contain block"
+            onDragStart={handleDragStart}
+            />
+        </div>
+
+        {/* Top Layer: Original Image (Clipped) */}
+        {/* Overlays the processed image, also positioned absolutely */}
         <div 
-          className="absolute top-0 left-0 h-full w-full overflow-hidden"
+          className="absolute inset-0 w-full h-full overflow-hidden"
           style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
         >
           <img 
             src={original} 
             alt="Before" 
-            className="w-full h-full object-contain block select-none"
+            className="w-full h-full object-contain block"
             onDragStart={handleDragStart}
           />
         </div>
 
         {/* Labels */}
-        <div className="absolute top-4 left-4 bg-black/60 text-white px-2 py-1 rounded text-xs pointer-events-none z-10">原图</div>
-        <div className="absolute top-4 right-4 bg-primary/80 text-white px-2 py-1 rounded text-xs pointer-events-none z-10">去水印后</div>
+        <div className="absolute top-4 left-4 bg-black/60 text-white px-2 py-1 rounded text-xs pointer-events-none z-10 backdrop-blur-sm">原图</div>
+        <div className="absolute top-4 right-4 bg-primary/80 text-white px-2 py-1 rounded text-xs pointer-events-none z-10 backdrop-blur-sm">去水印后</div>
 
         {/* Slider Handle */}
         <div 

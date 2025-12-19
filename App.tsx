@@ -3,7 +3,7 @@ import { ImageUploader } from './components/ImageUploader';
 import { Editor } from './components/Editor';
 import { CompareSlider } from './components/CompareSlider';
 import { removeWatermark } from './services/geminiService';
-import { ProcessingStatus } from './types';
+import { ProcessingStatus, ProcessMode } from './types';
 
 const App: React.FC = () => {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
@@ -18,19 +18,19 @@ const App: React.FC = () => {
     setErrorMsg(null);
   };
 
-  const handleProcess = async (maskBase64: string | null) => {
+  const handleProcess = async (maskBase64: string | null, mode: ProcessMode) => {
     if (!originalImage) return;
 
     setStatus(ProcessingStatus.PROCESSING);
     setErrorMsg(null);
 
     try {
-      const resultBase64 = await removeWatermark(originalImage, maskBase64);
+      const resultBase64 = await removeWatermark(originalImage, maskBase64, mode);
       setProcessedImage(resultBase64);
       setStatus(ProcessingStatus.SUCCESS);
     } catch (err: any) {
       setStatus(ProcessingStatus.ERROR);
-      setErrorMsg("处理图片时出错，请稍后重试或尝试自动模式。");
+      setErrorMsg("处理图片时出错，请稍后重试。");
       console.error(err);
     }
   };
@@ -92,13 +92,13 @@ const App: React.FC = () => {
               />
               <FeatureCard 
                 icon="🎯" 
-                title="精准去除" 
-                desc="支持手动框选，指哪打哪" 
+                title="手动多选" 
+                desc="支持多个区域同时框选" 
               />
               <FeatureCard 
-                icon="🖼️" 
-                title="无损画质" 
-                desc="保持原图分辨率和细节" 
+                icon="🌫️" 
+                title="满屏水印" 
+                desc="专攻重复平铺的文字水印" 
               />
             </div>
           </div>

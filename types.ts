@@ -18,6 +18,8 @@ export enum ProcessingStatus {
   ERROR = 'ERROR',
 }
 
+export type ProcessMode = 'auto' | 'manual' | 'tiled';
+
 export interface ProcessingResult {
   originalImage: string; // Base64
   processedImage: string | null; // Base64

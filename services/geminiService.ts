@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { ProcessMode } from "../types";
 
 // Ensure API Key is available
 const API_KEY = process.env.API_KEY;
@@ -91,10 +92,12 @@ async function compositeImage(originalB64: string, maskB64: string, resultB64: s
  * 
  * @param imageBase64 The original image in base64 format (without prefix)
  * @param maskBase64 Optional mask image in base64 format. White pixels = area to remove.
+ * @param mode The processing mode selected by the user
  */
 export const removeWatermark = async (
   imageBase64: string,
-  maskBase64?: string | null
+  maskBase64: string | null,
+  mode: ProcessMode = 'auto'
 ): Promise<string> => {
   try {
     const cleanImageBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
@@ -108,11 +111,13 @@ export const removeWatermark = async (
       }
     ];
 
-    // Default prompt for Auto mode
-    let prompt = "Detect and remove all watermarks, text overlays, and logos from this image. Output the clean image. STRICTLY preserve the quality, resolution, and details of the non-watermarked areas.";
+    let prompt = "";
 
-    // If a mask is provided, we send it as a second image and instruct the model to use it.
-    if (maskBase64) {
+    if (mode === 'tiled') {
+      // Specialized prompt for full-screen tiled watermarks
+      prompt = "This image contains a repeating, tiled watermark pattern covering the entire image (e.g., text overlaid in a grid). Detect and remove ALL instances of this watermark text completely. Restore the underlying background seamlessly. Maintain the original image quality, colors, and non-watermark details. Output ONLY the clean image.";
+    } else if (maskBase64) {
+      // Manual Mode with Mask
       const cleanMaskBase64 = maskBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
       parts.push({
         inlineData: {
@@ -121,21 +126,23 @@ export const removeWatermark = async (
         },
       });
       prompt = "The second image is a mask (white area represents the selection). Remove the content located within the white area of the mask from the first image. Inpaint the area to match the surrounding background seamlessly. Output the result image. Do not change any part of the image outside the mask.";
+    } else {
+      // Auto Mode (General)
+      prompt = "Detect and remove all watermarks, text overlays, and logos from this image. Output the clean image. STRICTLY preserve the quality, resolution, and details of the non-watermarked areas.";
     }
 
     parts.push({ text: prompt });
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image', // Good for general editing tasks
+      model: 'gemini-2.5-flash-image', 
       contents: {
         parts: parts,
       },
       config: {
-        temperature: 0.3, // Reduced temperature for stability
+        temperature: 0.3, 
       }
     });
 
-    // Extract the image from response
     const candidates = response.candidates;
     if (candidates && candidates.length > 0) {
       const parts = candidates[0].content.parts;
@@ -143,8 +150,9 @@ export const removeWatermark = async (
         if (part.inlineData && part.inlineData.data) {
           const resultBase64 = `data:image/png;base64,${part.inlineData.data}`;
           
-          // If we have a mask, composite the result to guarantee lossless preservation of unmasked areas
-          if (maskBase64) {
+          // Only composite if we have a mask and we are NOT in tiled mode (tiled mode affects whole image usually)
+          // However, if manual mode was used with a mask, we definitely want to composite.
+          if (maskBase64 && mode === 'manual') {
              return await compositeImage(imageBase64, maskBase64, resultBase64);
           }
           
