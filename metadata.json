@@ -1,0 +1,5 @@
+{
+  "name": "CleanCanvas - AI Watermark Remover",
+  "description": "A professional tool to remove watermarks from images using AI. Supports automatic detection and manual selection modes.",
+  "requestFramePermissions": []
+}
